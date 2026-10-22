@@ -1,23 +1,23 @@
 const express = require('express');
 const postRoutes = require('./routes/postRoutes');
+const diagnosticsRoutes = require('./routes/diagnosticsRoutes');
+const notFound = require('./middleware/notFound');
+const errorHandler = require('./middleware/errorHandler');
 const { resetData } = require('./data/postStore');
-const controller = require('./controllers/postController');
 
 function createApp() {
   const app = express();
   app.use(express.json());
 
-  app.use('/', postRoutes);
-  app.get('/explode', controller.explode);
+  // Public contract: resource-oriented routes only.
+  app.use('/posts', postRoutes);
 
-  // TODO:
-  // - make public contract resource-oriented
-  // - standardise success envelope
-  // - standardise error envelope
-  // - add pagination metadata on list route
-  // - cap limit server-side (default limit = 2 for exercise)
-  // - stop exposing old verb routes as public contract
-  // - expose safe internal failure route for testing/demo
+  // Demo/testing route for a safe internal failure.
+  app.use('/diagnostics', diagnosticsRoutes);
+
+  // Everything else (including the old verb routes) is a structured 404.
+  app.use(notFound);
+  app.use(errorHandler);
 
   return app;
 }
@@ -26,7 +26,7 @@ if (require.main === module) {
   const app = createApp();
   const port = 3000;
   app.listen(port, () => {
-    console.log(`Starter API listening on port ${port}`);
+    console.log(`API listening on port ${port}`);
   });
 }
 

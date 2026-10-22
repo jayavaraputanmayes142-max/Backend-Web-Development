@@ -1,35 +1,33 @@
+/**
+ * Controllers are thin: read the request, call one service method, send the
+ * standard envelope. Failures are thrown and handled centrally in errorHandler.
+ */
 const service = require('../services/postService');
 const http = require('../utils/http');
 
 function listPosts(req, res) {
-  const rows = service.listPosts(req.query);
-  return http.sendList(res, rows);
+  const { data, meta } = service.listPosts(req.query);
+  return http.sendList(res, data, meta);
 }
 
 function getPost(req, res) {
   const post = service.getPost(req.params.id);
-  if (!post) {
-    return http.sendError(res, 404, { message: 'post missing' });
-  }
-  return http.sendOk(res, post);
+  return http.sendData(res, 200, post);
 }
 
 function createPost(req, res) {
   const post = service.createPost(req.body);
-  return http.sendCreated(res, post);
+  res.location(`/posts/${post.id}`);
+  return http.sendData(res, 201, post);
 }
 
 function likePost(req, res) {
   const post = service.likePost(req.params.id);
-  return http.sendOk(res, { ok: true, likes: post.likes });
+  return http.sendData(res, 200, post);
 }
 
-function explode(req, res) {
-  try {
-    service.explode();
-  } catch (err) {
-    return http.sendError(res, 500, { error: err.message, stack: err.debug || err.stack });
-  }
+function simulateFailure(req, res) {
+  service.simulateFailure();
 }
 
 module.exports = {
@@ -37,5 +35,5 @@ module.exports = {
   getPost,
   createPost,
   likePost,
-  explode
+  simulateFailure
 };

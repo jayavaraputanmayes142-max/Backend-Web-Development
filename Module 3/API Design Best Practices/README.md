@@ -64,3 +64,19 @@ After refactor, manually verify:
 - missing resource returns structured 404
 - internal failure returns safe 500 without stack / fake DB leakage
 - old verb routes are gone from public contract
+
+## API Contract (after refactor)
+
+| Method | Route | Success |
+|---|---|---|
+| GET | `/posts?page=1&limit=2` | 200 `{ data: [...], meta: { page, limit, total, totalPages, hasNextPage, hasPrevPage } }` |
+| GET | `/posts/:id` | 200 `{ data: post }` |
+| POST | `/posts` (body: `title`, `author`) | 201 `{ data: post }` + `Location` header |
+| POST | `/posts/:id/likes` | 200 `{ data: post }` |
+| GET | `/diagnostics/failure` | always 500 (demo of a safe internal error) |
+
+Errors always look like `{ "error": { "code": "NOT_FOUND", "message": "Post not found" } }`.
+Codes: `NOT_FOUND`, `ROUTE_NOT_FOUND`, `VALIDATION_ERROR`, `INVALID_JSON`, `INTERNAL_ERROR`.
+
+`limit` defaults to 2 and is capped at 10 on the server. Invalid `page`/`limit` values fall back to the defaults.
+The old verb routes (`/getPosts`, `/getPost/:id`, `/createPost`, `/likePost/:id`, `/explode`) now return 404.

@@ -1,36 +1,47 @@
 const store = require('../data/postStore');
+const AppError = require('../utils/AppError');
+const { parsePagination, paginate } = require('../utils/pagination');
 
 function listPosts(query = {}) {
-  // intentionally poor design: no pagination, no metadata, no contract standardisation
-  return store.getAllPosts();
+  const pagination = parsePagination(query);
+  return paginate(store.getAllPosts(), pagination);
 }
 
 function getPost(id) {
-  return store.getPostById(id);
+  const post = store.getPostById(id);
+  if (!post) {
+    throw new AppError(404, 'NOT_FOUND', 'Post not found');
+  }
+  return post;
 }
 
 function createPost(body = {}) {
-  return store.createPost({
-    title: body.title,
-    author: body.author
-  });
+  const title = typeof body.title === 'string' ? body.title.trim() : '';
+  const author = typeof body.author === 'string' ? body.author.trim() : '';
+
+  if (!title || !author) {
+    throw new AppError(400, 'VALIDATION_ERROR', 'title and author are required strings');
+  }
+
+  return store.createPost({ title, author });
 }
 
 function likePost(id) {
   const post = store.incrementLikes(id);
   if (!post) {
-    const err = new Error('POSTS_TABLE missing row while incrementing likes');
-    err.statusCode = 500;
-    err.debug = 'FakeStack: at postService.js:19:11';
-    throw err;
+    // A missing post is the client's problem (404), not a server crash (500).
+    throw new AppError(404, 'NOT_FOUND', 'Post not found');
   }
   return post;
 }
 
-function explode() {
-  const err = new Error('SQLITE_CONSTRAINT in posts table');
-  err.statusCode = 500;
-  throw err;
+/**
+ * Demo-only: simulates an unexpected internal failure.
+ * The detailed message stays in the server logs; the client only
+ * ever sees the generic error envelope from the error handler.
+ */
+function simulateFailure() {
+  throw new Error('SQLITE_CONSTRAINT in posts table');
 }
 
 module.exports = {
@@ -38,5 +49,5 @@ module.exports = {
   getPost,
   createPost,
   likePost,
-  explode
+  simulateFailure
 };
